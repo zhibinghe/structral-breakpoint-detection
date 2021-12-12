@@ -1,4 +1,4 @@
-# Structural Breaks Detection: 'Simulation code'
+# Structural Breakpoints Detection: 'Simulation code'
 
 ---
 
