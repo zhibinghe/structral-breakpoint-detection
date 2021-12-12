@@ -26,5 +26,5 @@ The following packages are additionally required for comparations with other met
 1. Illustration
 2. Simulation 
 3. Comparation with other methods
-4. Real Data Analysis
+4. Real data analysis
 
