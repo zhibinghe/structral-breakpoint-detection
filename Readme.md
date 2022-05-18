@@ -2,7 +2,7 @@
 
 ---
 
-The R code for illustrations, simulations and real data analyses in the paper "Multiple Testing of Local Extrema for Detection of Multiple Change Points in Linear Models" by Zhibing He, Dan Cheng, and Yunpeng Zhao (2021) available via (Arxiv link will be available soon)
+The R code for illustrations, simulations and real data analyses in the paper "Multiple Testing of Local Extrema for Detection of Multiple Change Points in Linear Models" by Zhibing He, Dan Cheng, and Yunpeng Zhao (2021) (Arxiv link will be available soon)
 
 ## Dependencies
 
