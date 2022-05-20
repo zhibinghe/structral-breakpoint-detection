@@ -1,12 +1,14 @@
-####************ source main functions
+#### source main functions
 set.seed(202100)
-##
+# devtools::install_github("zhibinghe/dSTEM")
 library(dSTEM)
 library(not)
 library(strucchange)
+# https://github.com/pfryz/nsp
 source("NSP_for_Github_v4.R")
-# signal setting 
-signal.info = function(type = c("I","II-step","II-linear","mix")) {
+
+#### signal simulation settings 
+signal.info = function(type = c("I","II-step","II-linear","mixture")) {
   type = match.arg(type)
   # changes in slope
   if(type == "I") {
@@ -65,6 +67,7 @@ inverse.snr = function(Snr,order,gamma,addslope){
     return(minusslope)
   }
 }
+
 #### dstem method
 ## if type is 'mixture', the output is a list of type I and type II change points,
 ## otherwise, it is a vector indicating the change points
@@ -101,6 +104,7 @@ dstem = function(data,type = c("I","II-step","II-linear","mixture"),gamma,level=
   return(out)
 }
 #### Method comparation
+## NOT, NSP, BP methods 
 comp.detection = function(data,method = c("dstem","not","nsp","bp"),
                           type = c("I","II-step","II-linear","mixture"), level=0.05,gamma=NULL,M=NULL) {
   # M: initial number of change points
