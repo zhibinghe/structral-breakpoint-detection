@@ -1,11 +1,12 @@
-#### source main functions
+######################################################
+############# Main File #############################
+######################################################
 set.seed(202100)
 # devtools::install_github("zhibinghe/dSTEM")
 library(dSTEM)
 library(not)
 library(strucchange)
-# https://github.com/pfryz/nsp
-source("NSP_for_Github_v4.R")
+library(nsp)
 
 #### signal simulation settings 
 signal.info = function(type = c("I","II-step","II-linear","mixture")) {
@@ -106,7 +107,7 @@ dstem = function(data,type = c("I","II-step","II-linear","mixture"),gamma,level=
 #### Method comparation
 ## NOT, NSP, BP methods 
 comp.detection = function(data,method = c("dstem","not","nsp","bp"),
-                          type = c("I","II-step","II-linear","mixture"), level=0.05,gamma=NULL,M=NULL) {
+                          type = c("I","II-step","II-linear","mixture"),level=0.1,gamma=10,M=NULL) {
   # M: initial number of change points
   method = match.arg(method)
   type = match.arg(type)
@@ -128,7 +129,7 @@ comp.detection = function(data,method = c("dstem","not","nsp","bp"),
   #
   if (method == "nsp") {
     degree = ifelse (type == "II-step", 0, 1)
-    out = round(rowMeans(nsp_poly(data,M=M,sigma=1,alpha=0.05,deg=deg)$intervals[,-3]))
+    out = round(rowMeans(nsp_poly(data,M=M,sigma=1,alpha=level,deg=degree)$intervals[,-3]))
   }
   #
   if (method == "bp") {

@@ -1,4 +1,6 @@
 source("main.R")
+#path = getwd()
+#setwd(paste0(path,"/real_data"))
 
 #### HST-stock price
 hst = read.csv("HST_stock.csv",header=T)

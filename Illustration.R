@@ -3,6 +3,7 @@
 #####################################################
 library(latex2exp)
 library(dSTEM)
+set.seed(2021)
 ##
 k1 = 0.08
 k2 = 0.15
@@ -87,14 +88,9 @@ y2 = d2mu(x[floor(xmax2/2):xmax2])
 lines(loess(y2~x[floor(xmax2/2):xmax2],span=0.6),lwd=2,xlab="",ylab="")
 abline(v=v3,col="red",lty=2,lwd=1)
 points(x = c(v3-c*gamma,v3+c*gamma),y=y2[c(v3-c*gamma,v3+c*gamma)-floor(xmax2/2)],pch =16 ,col="blue")
-
-
 #####################################################
 ############# Illustration figure 2 ###########
 #####################################################
-library(dSTEM) 
-set.seed(2021)
-
 #### Type I change points
 l = 1200
 h = seq(150,by=150,length.out=6) 
