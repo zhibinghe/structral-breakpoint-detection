@@ -3,102 +3,112 @@
 ###### Comparason with other methods ################
 #####################################################
 source("main.R")
-library(foreach)
 ################ PART I #############################
 ############# Short term data sequence ##############
-
-x = signal.info(type="I")
+#### Type I
+x = signal.info(type="I") # change type to "II-step", "II-linear"
 signal = gen.signal(l=x$n,h=x$cpt,jump = x$jump.size,b1 = x$slope)
-data = signal + rnorm(length(signal))
-
-# run 100 times
-cpt.dstem = unlist(comp.detection(data,method="dstem","I",gamma=10))
-cpt.not = comp.detection(data,method="not","I",M=0.1*length(data))
-cpt.nsp = comp.detection(data,method="nsp","I",M=0.1*length(data))
-cpt.bp = comp.detection(data,method="bp","I",M=20)
-
-
-
-####################################################
-gamma=15
-#### piecewise linear function
-t0 = Sys.time()
-l = 1200
-h = seq(150,by=150,length.out=6) 
-jump = rep(0,7)
-beta1 = c(2,-1,2.5,-3,-0.2,2.5)/25
-beta1 = c(beta1,-sum(beta1*(c(h[1],diff(h))))/(l-tail(h,1)))
-signal = gen.signal(l,h,jump,beta1)
-## Modeling
-R = 100 #repeatation
-D.linebreak = function(i){
-  noise = rnorm(length(signal),0,1) # white noise
-  data = signal+noise
-  # modelling
-  dy = diff(smth.gau(data,gamma),na.rm=T)
-  ddy = diff(dy[!is.na(dy)])
-  model2 = cpTest(x=ddy,order=2,gamma=gamma,alpha=0.05) # alpha = 0.05
-  return(sort(c(model2$peak,model2$vall)))
-}
-# parallel computing
-c = 5 # number of cpu cores
-cl =parallel::makeCluster(c)
+# x$cpt # true change point locations
+# start parallel computing
+n.cpu = 4; R = 100 # repetition
+cl = parallel::makeCluster(4) # cpu cores
 doParallel::registerDoParallel(cl)
-
-out_linebreak_dstem = foreach(iterators::icount(R),.packages="dSTEM",.errorhandling="pass") %dopar% {
-  D.linebreak(0)
+# 
+cpt = NULL; time = NULL
+method = c("dstem","not","nsp")
+for (m in method){
+  tic()
+  if (m == "dstem") {
+    method.cpt = foreach(iterators::icount(R),.packages="dSTEM",.errorhandling="pass") %dopar% {
+      as.vector(unlist(comp.detection(signal + rnorm(x$n),method="dstem",x$name,gamma=20)))}}
+  if (m == "not")
+    method.cpt = foreach(iterators::icount(R),.packages="not",.errorhandling="pass") %dopar% {
+      comp.detection(signal + rnorm(x$n),method="not",x$name,M=0.1* x$n)}
+  if (m == "nsp")
+    method.cpt = foreach(iterators::icount(R),.packages="nsp",.errorhandling="pass") %dopar% {
+      comp.detection(signal + rnorm(x$n),method="nsp",x$name,M=0.1* x$n)}
+  if (m == "bp")
+    method.cpt = foreach(iterators::icount(R),.packages="strucchange",.errorhandling="pass") %dopar% {
+      comp.detection(signal + rnorm(x$n),method="bp",x$name,M=20)}
+  time.run = toc(quiet=TRUE); time.run = time.run$toc - time.run$tic
+  cpt = append(cpt,method.cpt)
+  time = append(time,time.run)
 }
-time_linebreak_dstem = Sys.time()-t0
-
-################################
-## piecewise constant function
-t0 = Sys.time()
-l = 1200
-h = seq(150,by=150,length.out=6) 
-jump = c(0,1.5,2,2.2,1.8,2,1.5)
-beta1 = rep(0,length(h)+1)
-signal = gen.signal(l,h,jump,beta1)
-#modeling
-R = 100 #repeatation
-D.stepjump = function(i){
-  noise = rnorm(length(signal),0,1) # white noise
-  data = signal+noise
-  # modelling
-  dy = diff(smth.gau(data,gamma),na.rm=T)
-  ddy = diff(dy[!is.na(dy)])
-  model1 = cpTest(x=dy,order=1,alpha=0.05,gamma=gamma,is.constant=T) # alpha = 0.05
-  return(sort(c(model1$peak,model1$vall)))
-}
-out_stepjump_dstem = foreach(iterators::icount(R),.packages="dSTEM",.errorhandling="pass") %dopar% {
-  D.stepjump(0)
-}
-time_stepjump_dstem = Sys.time()-t0
-#############################
-## Normal linear breaks
-t0 = Sys.time()
-l = 1200
-h = seq(150,by=150,length.out=6) 
-jump = c(0,1.5,2,2.2,1.8,2,1.5)*5
-beta1 = c(2,-1,2.5,-3,-0.2,2.5,-0.5)/25
-signal = gen.signal(l,h,jump,beta1)
-#modeling
-R = 100 #repeatation
-D.linejump = function(i){
-  noise = rnorm(length(signal),0,1) # white noise
-  data = signal+noise
-  dy = diff(smth.gau(data,gamma),na.rm=T)
-  ddy = diff(dy[!is.na(dy)])
-  # modelling with true slopes
-  #model1 = cpTest(x=dy,order=1,alpha=0.05,gamma=gamma,breaks=h,slope=beta1)
-  # estimated location and slope
-  model2 = cpTest(x=ddy,order=2,gamma=gamma,alpha=0.1)
-  breaks = est.pair(model2$vall,model2$peak,gamma)$cp
-  slope = est.slope(data,breaks)
-  model1 = cpTest(x=dy,order=1,alpha=0.05,gamma=gamma,breaks=breaks,slope=slope)
-  return(sort(c(model1$peak,model1$vall)))
-}
-out_linejump_dstem = foreach(iterators::icount(R),.packages="dSTEM",.errorhandling="pass") %dopar% {
-  D.linejump(0)
-}
-time_linejump_dstem = Sys.time()-t0
+names(time) = method
+cpt = split(cpt,as.factor(rep(1:length(method),each=R)))
 parallel::stopCluster(cl)
+#### Mixture 
+#### only dstem can discriminate type I and type II change points
+x = signal.info(type="mixture") # change type to "II-step", "II-linear"
+signal = gen.signal(l=x$n,h=x$cpt,jump = x$jump.size,b1 = x$slope)
+# start parallel computing
+n.cpu = 4; R = 100 # repetition
+cl = parallel::makeCluster(4) # cpu cores
+doParallel::registerDoParallel(cl)
+# 
+cpt = foreach(iterators::icount(R),.packages="dSTEM",.errorhandling="pass") %dopar% {
+      as.vector(unlist(comp.detection(signal + rnorm(x$n),
+                                      method="dstem",x$name)))}
+ parallel::stopCluster(cl) 
+################ PART II #############################
+############# Long term data sequence ##############
+#### Type I
+x = signal.info(type="I")
+signal = gen.signal(l=x$n,h=x$cpt,jump = x$jump.size,b1 = x$slope,rep=10)
+n = length(signal)
+# seq(c(x$cpt,n),n*rep,n) # true change point locations
+# start parallel computing
+cl = parallel::makeCluster(n.cpu) # cpu cores
+doParallel::registerDoParallel(cl)
+# 
+cpt = NULL; time = NULL
+method = c("dstem","not","nsp")
+for (m in method){
+  tic()
+  if (m == "dstem") {
+    method.cpt = foreach(iterators::icount(R),.packages="dSTEM",.errorhandling="pass") %dopar% {
+      as.vector(unlist(comp.detection(signal + rnorm(n),method="dstem",x$name,gamma=20)))}}
+  if (m == "not")
+    method.cpt = foreach(iterators::icount(R),.packages="not",.errorhandling="pass") %dopar% {
+      comp.detection(signal + rnorm(n),method="not",x$name,M=0.1*n)}
+  if (m == "nsp")
+    method.cpt = foreach(iterators::icount(R),.packages="nsp",.errorhandling="pass") %dopar% {
+      comp.detection(signal + rnorm(n),method="nsp",x$name,M=0.1*n)}
+  if (m == "bp")
+    method.cpt = foreach(iterators::icount(R),.packages="strucchange",.errorhandling="pass") %dopar% {
+      comp.detection(signal + rnorm(n),method="bp",x$name,M=100)}
+  time.run = toc(quiet=TRUE); time.run = time.run$toc - time.run$tic
+  cpt = append(cpt,method.cpt)
+  time = append(time,time.run)
+}
+names(time) = method
+cpt = split(cpt,as.factor(rep(1:length(method),each=R)))
+parallel::stopCluster(cl)
+###################################################################
+######################## Coverage Rate ############################
+capture.rate = function(x,th,b,L){
+  # x: estimated change points
+  # th: true locations
+  # b: location tolerance
+  # lower,upper: number of b
+  seg.capture = function(x,th,b,lower,upper,L){
+    f = function(x,lower,upper){
+      lowerb = lower*b + 1 
+      if(lower*b %% 1 == 0 & lower!=0) c(seq(ceiling(x-upper*b),x-lowerb),seq(x+lowerb,floor(x+upper*b)))
+      else c(seq(ceiling(x-upper*b),floor(x-lower*b)),seq(ceiling(x+lower*b),floor(x+upper*b)))
+    }
+    if(upper == "Inf") seg = setdiff(1:L,unique(unlist(lapply(th,f,lower=0,upper=lower))))
+    else seg = unique(unlist(lapply(th,f,lower=lower,upper=upper)))
+    round(mean(sapply(x, function(x) sum(x %in% seg)))/length(th),4)
+  }
+  f = function(t) cbind(seg.capture(t,th=th,b=b,lower=0,upper=1/3,L=L),
+                        seg.capture(t,th=th,b=b,lower=1/3,upper=1,L=L),
+                        seg.capture(t,th=th,b=b,lower=1,upper=2,L=L),
+                        seg.capture(t,th=th,b=b,lower=2,upper=4,L=L),
+                        seg.capture(t,th=th,b=b,lower=4,upper=Inf,L=L))
+  table = as.data.frame(f(x)); colnames(table) = c("0--1/3","1/3--1","1--2","2--4",">4")
+  return(table)
+}
+# coverage rate table
+b = 20 # b = gamma
+do.call(rbind,lapply(cpt,capture.rate,th = x$cpt,b=20,L=x$n))

@@ -1,4 +1,4 @@
-# Structural Breakpoints Detection: 'Simulation code'
+# Change Points Detection in Linear Models
 
 ---
 
@@ -10,21 +10,20 @@ The R code for illustrations, simulations and real data analyses in the paper "M
 
 The following R packages are required for plots and tables presented in the paper.
 
-- 'dSTEM' implementing our multiple testing for change points detection method (installed via  [r code](devtools::install_github('zhibinghe/ChangePoint') ))
-- 'xtable' for exporting tables in latex format
+- 'dSTEM' implementing our multiple testing for change points detection method (installed from [github](https://github.com/zhibinghe/ChangePoint))
 - 'latex2exp' for mathematical symbols in plots
 - 'foreach' for parallel computing
 
-The following packages are additionally required for comparations with other methods
+The following packages are additionally required for comparason with other methods
 
 - 'not' for the Narrowest-Over-Threshold method
 - 'strucchange' for B&P method
-- 'nsp' for Narrowest-Significance-Pursuit method (installed from [github](https://github.com/pfryz/nsp) )
+- 'nsp' for Narrowest-Significance-Pursuit method 
 
 ## Main Files
 
 1. Illustration
-2. Simulation 
-3. Comparation with other methods
+2. Simulation (FDR/Power performance vs. Gamma or SNR)
+3. Comparason with other methods
 4. Real data analysis
 

@@ -3,28 +3,30 @@
 ######################################################
 set.seed(202100)
 # devtools::install_github("zhibinghe/dSTEM")
+library(foreach)
+library(doParallel)
+library(tictoc)
 library(dSTEM)
 library(not)
 library(strucchange)
 library(nsp)
-
 #### signal simulation settings 
 signal.info = function(type = c("I","II-step","II-linear","mixture")) {
   type = match.arg(type)
   # changes in slope
   if(type == "I") {
-    name = "Type I"
+    name = "I"
     cpt.type = "pcwsLinContMean"
     n = 1200
     cpt = seq(150,by=150,length.out=6)
     jump.size = rep(0,7)
     beta1 = c(2,-1,2.5,-3,-0.2,2.5)/25
     # To make the endpoint be the same with start-point
-    slope = c(beta1,-sum(beta1*(c(cpt[1],diff(cpt))))/(l-tail(cpt,1)))
+    slope = c(beta1,-sum(beta1*(c(cpt[1],diff(cpt))))/(n-tail(cpt,1)))
   }
   # changes in intercept
   else if(type == "II-step") {
-    name = "Type II (stepwise)"
+    name = "II-step"
     cpt.type = "pcwsConstMean"
     n = 1200
     cpt = seq(150,by=150,length.out=6) 
@@ -33,7 +35,7 @@ signal.info = function(type = c("I","II-step","II-linear","mixture")) {
   }
   # changes in intercept and slope
   else if(type == "II-linear") {
-    name = "Type II (linear)"
+    name = "II-linear"
     cpt.type = "pcwsLinMean"
     n = 1200
     cpt = seq(150,by=150,length.out=6) 
@@ -69,45 +71,11 @@ inverse.snr = function(Snr,order,gamma,addslope){
   }
 }
 
-#### dstem method
-## if type is 'mixture', the output is a list of type I and type II change points,
-## otherwise, it is a vector indicating the change points
-dstem = function(data,type = c("I","II-step","II-linear","mixture"),gamma,level=0.05){
-  type = match.arg(type)
-  dy = diff(smth.gau(data,gamma))
-  ddy = diff(dy)
-  if (type == "I") {
-    est = cpTest(x=ddy,order=2,gamma=gamma,alpha=level)
-    out = list(vall = est$vall,peak = est$peak)
-  }
-  else if (type == "II-step") {
-    est = cpTest(x=dy,order=1,alpha=level,gamma=gamma,is.constant=T)
-    out = list(vall = est$vall,peak = est$peak)
-  }
-  else if (type == "II-linear") {
-    model2 = cpTest(x=ddy,order=2,gamma=gamma,alpha=2*level)
-    breaks = est.pair(model2$vall,model2$peak,gamma)$cp
-    slope = est.slope(data,breaks)
-    est = cpTest(x=dy,order=1,alpha=level,gamma=gamma,breaks=breaks,slope=slope)
-    out = list(vall = est$vall, peak = est$peak)
-  }
-  # mixture  
-  else {
-    model2 = cpTest(x=ddy,order=2,gamma=gamma,alpha=2*level)
-    breaks = est.pair(model2$vall,model2$peak,gamma)$cp
-    if(length(breaks)==0) breaks = floor(length(data)/2)
-    slope = est.slope(data,breaks)
-    model1 = cpTest(x=dy,order=1,alpha=level,gamma=gamma,breaks=breaks,slope=slope)
-    jump_seg = unique(c(sapply(c(model1$peak,model1$vall),function(x) floor(x-2*gamma):ceiling(x+2*gamma))))
-    est = cpTest(x=ddy,order=2,gamma=gamma,alpha=level,untest=jump_seg)
-    out = list(type1 = list(vall=est$vall,peak=est$peak), type2 = list(vall=model1$vall,peak=model1$peak))
-  }
-  return(out)
-}
 #### Method comparation
 ## NOT, NSP, BP methods 
 comp.detection = function(data,method = c("dstem","not","nsp","bp"),
-                          type = c("I","II-step","II-linear","mixture"),level=0.1,gamma=10,M=NULL) {
+                          type = c("I","II-step","II-linear","mixture"),
+                          level=0.05,gamma=20,M=NULL) {
   # M: initial number of change points
   method = match.arg(method)
   type = match.arg(type)
@@ -129,7 +97,8 @@ comp.detection = function(data,method = c("dstem","not","nsp","bp"),
   #
   if (method == "nsp") {
     degree = ifelse (type == "II-step", 0, 1)
-    out = round(rowMeans(nsp_poly(data,M=M,sigma=1,alpha=level,deg=degree)$intervals[,-3]))
+    out = round(rowMeans(nsp_poly(data,M=M,sigma=1,alpha=level,
+                                  deg=degree)$intervals[,-3]))
   }
   #
   if (method == "bp") {

@@ -5,7 +5,7 @@ library(foreach)
 library(MASS)
 library(dSTEM)
 
-#### Calculate slope difference based on SNR 
+#### Calculate sl ope difference based on SNR 
 inverse.snr = function(Snr,order,gamma,addslope){
   # order: the order of derivative
   # addslope: k_j + k_{j+1}, only required for order = 1
